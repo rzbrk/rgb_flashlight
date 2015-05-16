@@ -32,11 +32,9 @@ init:
 ;==============================================================================
 
 main:
-    out PORTC, r16
-    ldi r24, $00                        ; set wait time to 0.3 sec @ 1 MHz
-    ldi r25, $00
-    rcall wait                          ; call wait routine
+    in r16, PINB                        ; read Port B
     com r16                             ; bit-wise invert of r16 
+    out PORTC, r16
     rjmp main
 
 ;==============================================================================
