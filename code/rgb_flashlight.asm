@@ -6,7 +6,7 @@
 
     .def cnt = r18                      ; Global counter for PWM
     .def pwm_led = r19                  ; holds PWM value for LED
-    .equ pwm_inc = $20                  ; PWM increment when key pressed
+    .equ lstend = $01                   ; End mark of list "vals"
 
     .cseg                               ; Code segment
     rjmp init                           ; Jump here after reset
@@ -32,8 +32,22 @@ init:
     ldi r16, $ff
     out DDRC, r16
 
-    ; Set start values for PWM
-    ldi pwm_led, $00
+    ; Configure pointer address for list "vals". Store values in word register
+    ; X (XH,XL)
+    ldi ZL, low(addr*2)
+    ldi ZH, high(addr*2)
+    lpm                                 ; r0 <= low(addr)
+    mov XL, r0
+    adiw ZL, 1                          ; Z <= Z+1
+    lpm                                 ; r0 <= high(addr)
+    mov XH, r0
+    lsl XL                              ; low(byte addr.) <= 2 * word addr.
+    rol XH                              ; high(byte addr.) <= 2 * word addr.
+
+    ; Initialize PWM (r0 holds PWM value after execution of lpm)
+    rcall list_begin    
+    lpm                                 ; r0 <= first list element
+    mov pwm_led, r0                     ; Initialize pwm_led
 
     ; Configute Timer_0 interrupt
     ldi r16, 0b011                      ; System clock divider: 64
@@ -65,17 +79,17 @@ button:
 btn_pr:
     sbic PINB, PINB0                    ; Button pressed?
     rjmp btn_end                        ; No? Jump to btn_end
-    subi pwm_led, -pwm_inc              ; Yes? Add pwm_inc to pwm_led
-
-    ; The following code sets pwm values back to zero if pwm_led is smaller
-    ; then pwm_inc. This is necessary, when pwm_inc is not a power of 2.
-    ldi r16, pwm_inc
-    cp pwm_led, r16                     ; Compare pwm_led and pwm_inc
-    brsh btn_skp                        ; Skip following command if
-                                        ; pwm_led > pwm_inc
-    ldi pwm_led, $00                    ; LED off if pwm_led <= pwm_inc
+    adiw ZL, 1                          ; Yes? Move pointer in "vals" one
+                                        ; element forward.
+    lpm                                 ; r0 holds list element
+    ldi r16, lstend                     ; Check if end of list is reached
+    cp r0, r16
+    brne btn_skp                        ; No? Jump to btn_skp
+    rcall list_begin                    ; Yes? Go to beginning of list "vals".
+    lpm                                 ; Now, read the first element to r0.
 
 btn_skp:
+    mov pwm_led, r0                     ; pwm_led <= r0
     ldi r24, $00                        ; Debounce: set wait time ~10 ms
     ldi r25, $0a
     rcall wait
@@ -146,6 +160,23 @@ wait:
     sbiw r24,1                      ; 2 clock steps
     brne wait                       ; 2 clock steps
     ret
+
+;==============================================================================
+; Return pointer address to beginning of list "vals".
+;==============================================================================
+
+list_begin:
+    mov ZL, XL
+    mov ZH, XH
+    ret
+
+;==============================================================================
+; List definitions
+;==============================================================================
+
+addr:   .dw vals                    ; Start address of list vals
+vals:   .db 0,16,32,64,128,255,1    ; List with PWM value definitions. "1"
+                                    ; denotes end of list.
 
     .exit
 
