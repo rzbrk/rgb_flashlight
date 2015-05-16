@@ -35,14 +35,14 @@ init:
     ; Set start values for PWM
     ldi pwm_led, $00
 
-    ; Configute Timwer_0 interrupt
-;    ldi r16, 0b101                      ; System clock divider: 1024
-;    out TCCR0, r16
-;    in r16, TIMSK                       ; Timer interrupt mask
-;    ori r16, 0b00000010                 ; TOIE0 = 1
-;    out TIMSK, r16
-;    clr cnt                             ; Initialize PWM counter
-;    sei                                 ; Activate interrupt
+    ; Configute Timer_0 interrupt
+    ldi r16, 0b011                      ; System clock divider: 64
+    out TCCR0, r16
+    in r16, TIMSK                       ; Timer interrupt mask
+    ori r16, 0b00000010                 ; TOIE0 = 1
+    out TIMSK, r16
+    clr cnt                             ; Initialize PWM counter
+    sei                                 ; Activate interrupt
 
 ;==============================================================================
 ; Main loop
@@ -123,7 +123,7 @@ timer:
     in r16, SREG                        ; Save SREG
     push r16
 
-    dec cnt                             ; Decrement counter
+;    dec cnt                             ; Decrement counter
 
     pop r16
     out SREG, r16                      ; Restore SREG from stack
@@ -147,5 +147,5 @@ wait:
     brne wait                       ; 2 clock steps
     ret
 
-.exit
+    .exit
 
