@@ -8,13 +8,10 @@
     .def pwm_led = r19                  ; holds PWM value for LED
     .equ lstend = $01                   ; End mark of list "vals"
 
-    .cseg                               ; Code segment
+    .org $0000
     rjmp init                           ; Jump here after reset
-;    .org $06
-;    rjmp timer                          ; Jump for Timer_0 overflow interrupt
-    .org $10                            ; Skip all other interrupts
-
-.reset:
+    .org OVF0addr
+    rjmp timer                          ; Jump for Timer_0 overflow interrupt
 
 ;==============================================================================
 ; Initialization
@@ -49,14 +46,15 @@ init:
     lpm                                 ; r0 <= first list element
     mov pwm_led, r0                     ; Initialize pwm_led
 
-    ; Configute Timer_0 interrupt
-    ldi r16, 0b011                      ; System clock divider: 64
+    ; Configute Timer_0 interrupt (divider: 1)
+    ldi r16, (1<<CS00)|(0<<CS01)|(0<<CS02)
     out TCCR0, r16
-    in r16, TIMSK                       ; Timer interrupt mask
-    ori r16, 0b00000010                 ; TOIE0 = 1
+    ldi r16, (1<<TOIE0)
     out TIMSK, r16
-    clr cnt                             ; Initialize PWM counter
     sei                                 ; Activate interrupt
+
+    ; Initialize counter
+    clr cnt
 
 ;==============================================================================
 ; Main loop
@@ -64,7 +62,6 @@ init:
 
 main:
     rcall button
-    rcall led
     rjmp main
 
 ;==============================================================================
@@ -107,28 +104,6 @@ btn_end:
     ret
 
 ;==============================================================================
-; Output PWM to LED
-;==============================================================================
-
-; LED is connected somewhere on Port C
-
-led:
-    push r16
-
-    dec cnt
-
-    ldi r16, $ff                        ; Assume LED to be on
-    cp pwm_led, cnt                     ; Compare
-    brsh led_skp                        ; Skip following command if
-                                        ; pwm_led > cnt
-    ldi r16, $00                        ; LED off
-led_skp:
-    out PORTC, r16
-
-    pop r16
-    ret
-
-;==============================================================================
 ; Timer_0 interrupt routine
 ;==============================================================================
 
@@ -137,10 +112,21 @@ timer:
     in r16, SREG                        ; Save SREG
     push r16
 
-;    dec cnt                             ; Decrement counter
+    inc cnt                             ; Increment counter
+;    cpi cnt, $20                        ; cnt >= 32?
+;    brsh cnt_skp                        
+;    ldi cnt, $00
+
+cnt_skp:
+    ldi r16, $ff                        ; Assume LED to be on ($ff)
+    cp pwm_led, cnt                     ; Skip following cmd if pwm_led > cnt
+    brsh led_skp
+    ldi r16, $00                        ; LED off
+led_skp:
+    out PORTC, r16                      ; Output to Port C
 
     pop r16
-    out SREG, r16                      ; Restore SREG from stack
+    out SREG, r16                       ; Restore SREG from stack
     pop r16
         
     reti
@@ -175,8 +161,9 @@ list_begin:
 ;==============================================================================
 
 addr:   .dw vals                    ; Start address of list vals
-vals:   .db 0,16,32,64,128,255,1    ; List with PWM value definitions. "1"
-                                    ; denotes end of list.
+vals:   .db 0,16,32,64,128,255,1,0  ; List with PWM value definitions. "1"
+                                    ; denotes end of list. # of list elements
+                                    ; shall be even, hence added extra "0".
 
     .exit
 
