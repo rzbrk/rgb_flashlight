@@ -8,6 +8,13 @@
     .def pwm_led = r19                  ; holds PWM value for LED
     .equ lstend = $01                   ; End mark of list "vals"
 
+    .equ port_led = PORTC               ; Port to which leds are connected
+    .equ pddr_led = DDRC                ; and its DDR
+    ; Define the pins, where the leds are connected to
+    .equ pin_red = $00                  ; RED led
+    .equ pin_grn = $01                  ; GREEN led
+    .equ pin_blu = $02                  ; BLUE led
+
     .org $0000
     rjmp init                           ; Jump here after reset
     .org OVF0addr
@@ -25,9 +32,11 @@ init:
     ldi r16, high(ramend)
     out sph, r16
 
-    ; Configure Port C for output
+    ; Configure port_led for output
     ldi r16, $ff
-    out DDRC, r16
+    out pddr_led, r16
+    ldi r16, (0<<pin_red)|(0<<pin_grn)|(0<<pin_blu)
+    out port_led, r16
 
     ; Configure pointer address for list "vals". Store values in word register
     ; X (XH,XL)
@@ -118,7 +127,7 @@ timer:
     ldi r16, $00                        ; LED off
 
 led_skp:
-    out PORTC, r16                      ; Output to Port C
+    out port_led, r16                   ; Output to Port C
 
     inc cnt                             ; Increment counter
     cpi cnt, $19                        ; cnt >= 31?
