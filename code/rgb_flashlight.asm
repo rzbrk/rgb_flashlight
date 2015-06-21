@@ -121,7 +121,7 @@ led_skp:
     out PORTC, r16                      ; Output to Port C
 
     inc cnt                             ; Increment counter
-    cpi cnt, $20                        ; cnt >= 32?
+    cpi cnt, $19                        ; cnt >= 31?
     brlo cnt_skp                        ; No: Jump to cnt_skp
     ldi cnt, $00                        ; Yes: Reset cnt to zero
 
