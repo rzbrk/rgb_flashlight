@@ -112,19 +112,20 @@ timer:
     in r16, SREG                        ; Save SREG
     push r16
 
-    inc cnt                             ; Increment counter
-;    cpi cnt, $20                        ; cnt >= 32?
-;    brsh cnt_skp                        
-;    ldi cnt, $00
-
-cnt_skp:
     ldi r16, $ff                        ; Assume LED to be on ($ff)
     cp pwm_led, cnt                     ; Skip following cmd if pwm_led > cnt
     brsh led_skp
     ldi r16, $00                        ; LED off
+
 led_skp:
     out PORTC, r16                      ; Output to Port C
 
+    inc cnt                             ; Increment counter
+    cpi cnt, $20                        ; cnt >= 32?
+    brlo cnt_skp                        ; No: Jump to cnt_skp
+    ldi cnt, $00                        ; Yes: Reset cnt to zero
+
+cnt_skp:
     pop r16
     out SREG, r16                       ; Restore SREG from stack
     pop r16
@@ -161,7 +162,7 @@ list_begin:
 ;==============================================================================
 
 addr:   .dw vals                    ; Start address of list vals
-vals:   .db 0,16,32,64,128,255,1,0  ; List with PWM value definitions. "1"
+vals:   .db 0,2,4,8,16,32,1,0       ; List with PWM value definitions. "1"
                                     ; denotes end of list. # of list elements
                                     ; shall be even, hence added extra "0".
 
