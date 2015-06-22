@@ -14,7 +14,9 @@
     .equ lstend = $01                   ; End mark of list "vals"
 
     .equ port_btn = PINB                ; Port to which buttons are connected
-    .equ pin_btn_red = $00              ; Button RED led
+    .equ pin_btn_red = PINB0            ; Button RED led
+    .equ pin_btn_grn = PINB1            ; Button GREEN led
+    .equ pin_btn_blu = PINB2            ; Button BLUE led
 
     .equ port_led = PORTC               ; Port to which leds are connected
     .equ pddr_led = DDRC                ; and its DDR
@@ -79,7 +81,7 @@ init:
 
 main:
 ;    rcall button
-    button PINB, PINB0
+    button port_btn, pin_btn_red
     rjmp main
 
 ;==============================================================================
