@@ -48,23 +48,6 @@ init:
     ldi r16, (0<<pin_led_red)|(0<<pin_led_grn)|(0<<pin_led_blu)
     out port_led, r16
 
-;    ; Configure pointer address for list "vals". Store values in word register
-;    ; X (XH,XL)
-;    ldi ZL, low(addr*2)
-;    ldi ZH, high(addr*2)
-;    lpm                                 ; r0 <= low(addr)
-;    mov XL, r0
-;    adiw ZL, 1                          ; Z <= Z+1
-;    lpm                                 ; r0 <= high(addr)
-;    mov XH, r0
-;    lsl XL                              ; low(byte addr.) <= 2 * word addr.
-;    rol XH                              ; high(byte addr.) <= 2 * word addr.
-;
-;    ; Initialize PWM (r0 holds PWM value after execution of lpm)
-;    rcall list_begin    
-;    lpm                                 ; r0 <= first list element
-;    mov pwm_led, r0                     ; Initialize pwm_led
-
     ; Configute Timer_0 interrupt (divider: 1)
     ldi r16, (1<<CS00)|(0<<CS01)|(0<<CS02)
     out TCCR0, r16
@@ -134,24 +117,6 @@ cnt_skp:
     pop r16
         
     reti
-
-;==============================================================================
-; Return pointer address to beginning of list "vals".
-;==============================================================================
-
-;list_begin:
-;    mov ZL, XL
-;    mov ZH, XH
-;    ret
-
-;==============================================================================
-; List definitions
-;==============================================================================
-
-;addr:   .dw vals                    ; Start address of list vals
-;vals:   .db 0,2,4,8,16,32,1,0       ; List with PWM value definitions. "1"
-;                                    ; denotes end of list. # of list elements
-;                                    ; shall be even, hence added extra "0".
 
     .exit
 
