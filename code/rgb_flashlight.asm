@@ -3,17 +3,25 @@
 ;==============================================================================
 
     .include "m8def.inc"                ; We are using ATmega8
+    .include "wait.inc"
+    .include "button.inc"
 
     .def cnt = r18                      ; Global counter for PWM
-    .def pwm_led = r19                  ; holds PWM value for LED
+    .def pwm_led = r19                  ; holds PWM value for led
+    .def lpos_red = r20                 ; holds list pos for RED led
+    .def lpos_grn = r21                 ; holds list pos for GREEN led
+    .def lpos_blu = r22                 ; holds list pos for BLUE led
     .equ lstend = $01                   ; End mark of list "vals"
+
+    .equ port_btn = PINB                ; Port to which buttons are connected
+    .equ pin_btn_red = $00              ; Button RED led
 
     .equ port_led = PORTC               ; Port to which leds are connected
     .equ pddr_led = DDRC                ; and its DDR
     ; Define the pins, where the leds are connected to
-    .equ pin_red = $00                  ; RED led
-    .equ pin_grn = $01                  ; GREEN led
-    .equ pin_blu = $02                  ; BLUE led
+    .equ pin_led_red = $00              ; RED led
+    .equ pin_led_grn = $01              ; GREEN led
+    .equ pin_led_blu = $02              ; BLUE led
 
     .org $0000
     rjmp init                           ; Jump here after reset
@@ -35,7 +43,7 @@ init:
     ; Configure port_led for output
     ldi r16, $ff
     out pddr_led, r16
-    ldi r16, (0<<pin_red)|(0<<pin_grn)|(0<<pin_blu)
+    ldi r16, (0<<pin_led_red)|(0<<pin_led_grn)|(0<<pin_led_blu)
     out port_led, r16
 
     ; Configure pointer address for list "vals". Store values in word register
@@ -70,47 +78,9 @@ init:
 ;==============================================================================
 
 main:
-    rcall button
+;    rcall button
+    button PINB, PINB0
     rjmp main
-
-;==============================================================================
-; Check for buttons pressed
-;==============================================================================
-
-; Button is connected to PINB0
-
-button:
-    push r16
-
-btn_pr:
-    sbic PINB, PINB0                    ; Button pressed?
-    rjmp btn_end                        ; No? Jump to btn_end
-    adiw ZL, 1                          ; Yes? Move pointer in "vals" one
-                                        ; element forward.
-    lpm                                 ; r0 holds list element
-    ldi r16, lstend                     ; Check if end of list is reached
-    cp r0, r16
-    brne btn_skp                        ; No? Jump to btn_skp
-    rcall list_begin                    ; Yes? Go to beginning of list "vals".
-    lpm                                 ; Now, read the first element to r0.
-
-btn_skp:
-    mov pwm_led, r0                     ; pwm_led <= r0
-    ldi r24, $00                        ; Debounce: set wait time ~10 ms
-    ldi r25, $0a
-    rcall wait
-
-btn_rls:
-    sbis PINB, PINB0                    ; Button released?
-    rjmp btn_rls                        ; No? Jump back to btn_rls
-
-    ldi r24, $00                        ; Debounce: Set wait time ~10 ms
-    ldi r25, $0a
-    rcall wait
-
-btn_end:
-    pop r16
-    ret
 
 ;==============================================================================
 ; Timer_0 interrupt routine
@@ -140,22 +110,6 @@ cnt_skp:
     pop r16
         
     reti
-
-;==============================================================================
-; Wait routine
-;==============================================================================
-
-; Calculation of wait time (t):
-; r24:  start value for register r24 [1]
-; r25:  start value for register r25 [1]
-; f_mc: Clock frequency of Microcontroller [Hz]
-;
-; t = 4 * (256 - r24) * (256 - r25) / f_mc
-
-wait:
-    sbiw r24,1                      ; 2 clock steps
-    brne wait                       ; 2 clock steps
-    ret
 
 ;==============================================================================
 ; Return pointer address to beginning of list "vals".
